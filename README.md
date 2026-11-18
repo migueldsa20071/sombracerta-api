@@ -1,56 +1,147 @@
 # Sombra Certa API
 
-API REST feita em Spring Boot para a Global Solution 2026.2 da FIAP (Domain Driven Design - Java), no desafio de calor extremo. A ideia é ajudar idosos e trabalhadores de rua de São Paulo a achar um lugar para se proteger do calor.
+API REST feita em Spring Boot para a **Global Solution 2026.2 da FIAP** (CitizenTech · Domain Driven Design - Java). O tema é o calor extremo nas grandes cidades. O foco são idosos e trabalhadores de rua, que ficam mais expostos nas ondas de calor, principalmente na região da Avenida Paulista e da Bela Vista, em São Paulo.
 
 A API guarda dois tipos de dado:
 
-- **Pontos de refúgio**: praças arborizadas, pontos de hidratação, abrigos climatizados e unidades de saúde.
-- **Registros de temperatura**: temperatura e umidade medidas em cada ponto. A API devolve também o nível de risco (BAIXO, MODERADO, ALTO ou EXTREMO).
+- **Pontos de refúgio**: lugares onde a pessoa consegue se proteger do calor (praças arborizadas, pontos de hidratação, abrigos climatizados e unidades de saúde).
+- **Registros de temperatura**: temperatura e umidade medidas em cada ponto. O nível de risco (BAIXO, MODERADO, ALTO ou EXTREMO) é calculado automaticamente a partir da temperatura.
+
+## Links
+
+| Item | Link |
+|---|---|
+| Repositório GitHub | https://github.com/migueldsa20071/sombracerta-api |
+| Deploy (Render) | https://sombracerta-api.onrender.com |
+
+## Integrantes
+
+| Nome completo | RM |
+|---|---|
+| João Gabriel C.M. Santos | RM563953 |
+| Miguel dos Santos de Andrade | RM563516 |
+| Pedro Henrique da Silva | RM566235 |
 
 ## Tecnologias
 
-Java 21, Spring Boot 3.3.5, Spring Data JPA, Bean Validation, Oracle (ojdbc11), Docker e Render.
+| Tecnologia | Uso no projeto |
+|---|---|
+| Java 21 | Linguagem da aplicação |
+| Spring Boot 3.3.5 | Framework base, servidor web embutido e injeção de dependências |
+| Spring Web | Criação dos endpoints REST (controllers) |
+| Spring Data JPA / Hibernate | Mapeamento objeto-relacional e acesso aos dados (DAO) |
+| Bean Validation | Validação dos dados de entrada (DTOs) |
+| Oracle (ojdbc11) | Banco de dados relacional da FIAP |
+| Maven | Gerenciamento de dependências e build do `.jar` |
+| Docker | Empacotamento da aplicação para o deploy |
+| Render | Servidor onde a API está publicada |
 
-## Como o projeto está organizado
+## Arquitetura em camadas
+
+O caminho de uma requisição é **Controller → BO → DAO → Banco de dados**.
 
 ```
 br.com.fiap.sombracerta
-├── model        entidades JPA (PontoRefugio, RegistroTemperatura, TipoPonto)
-├── dao          repositórios Spring Data JPA
-├── bo           regras de negócio
-├── controller   endpoints REST
-├── dto          classes de entrada e saída com validação
-└── exception    exceções próprias e o GlobalExceptionHandler
+├── model        entidades JPA mapeadas para o Oracle (PontoRefugio, RegistroTemperatura, TipoPonto)
+├── dao          acesso a dados (Spring Data JPA)
+├── bo           regras de negócio e transações
+├── controller   endpoints REST (GET, POST, PUT, DELETE)
+├── dto          objetos de entrada e saída, com validações
+└── exception    exceções de domínio e GlobalExceptionHandler
 ```
+
+| Camada | Responsabilidade |
+|---|---|
+| Model | Classes que representam as tabelas do Oracle (`@Entity`, `@Table`, `@Column`) e a relação 1:N entre ponto e registros. |
+| DAO | Interfaces `PontoRefugioDAO` e `RegistroTemperaturaDAO`, que estendem `JpaRepository` e fazem as consultas ao banco. |
+| BO | `PontoRefugioBO` e `RegistroTemperaturaBO`: aplicam as regras de negócio, controlam as transações e lançam as exceções de domínio. |
+| Controller | `PontoRefugioController`, `RegistroTemperaturaController` e `HomeController`: recebem as requisições HTTP, validam os dados e devolvem a resposta. |
+| DTO | Records de Request e Response, que isolam o que entra e sai da API das entidades do banco. |
+| Exception | Exceções de domínio e `GlobalExceptionHandler`, que padroniza todas as respostas de erro. |
 
 ## Banco de dados
 
-Duas tabelas, ligadas por chave estrangeira (um ponto tem vários registros):
+Duas tabelas, ligadas por chave estrangeira (um ponto tem vários registros, relação 1:N). Elas são criadas automaticamente pelo Hibernate na primeira execução (`ddl-auto=update`).
 
-- `TB_PONTO_REFUGIO`: ID_PONTO, NM_PONTO, DS_ENDERECO, NM_CIDADE, TP_PONTO, DT_CADASTRO, ST_ATIVO
-- `TB_REGISTRO_TEMPERATURA`: ID_REGISTRO, ID_PONTO, DT_REGISTRO, NR_TEMPERATURA_C, NR_UMIDADE_PCT
+**`TB_PONTO_REFUGIO`**
 
-As tabelas são criadas sozinhas na primeira execução (`ddl-auto=update`).
+| Coluna | Atributo Java | Descrição |
+|---|---|---|
+| `ID_PONTO` (PK) | `id` | Identificador gerado automaticamente |
+| `NM_PONTO` | `nome` | Nome do ponto (obrigatório, até 120 caracteres) |
+| `DS_ENDERECO` | `endereco` | Endereço (obrigatório, até 200 caracteres) |
+| `NM_CIDADE` | `cidade` | Cidade (obrigatório, até 80 caracteres) |
+| `TP_PONTO` | `tipo` | Tipo do ponto (enum `TipoPonto`) |
+| `DT_CADASTRO` | `dataCadastro` | Data de cadastro, preenchida pela API |
+| `ST_ATIVO` | `ativo` | Indica se o ponto está ativo |
+
+**`TB_REGISTRO_TEMPERATURA`**
+
+| Coluna | Atributo Java | Descrição |
+|---|---|---|
+| `ID_REGISTRO` (PK) | `id` | Identificador gerado automaticamente |
+| `ID_PONTO` (FK) | `ponto` | Ponto de refúgio ao qual o registro pertence |
+| `DT_REGISTRO` | `dataRegistro` | Data da medição |
+| `NR_TEMPERATURA_C` | `temperaturaC` | Temperatura em °C |
+| `NR_UMIDADE_PCT` | `umidadePct` | Umidade relativa do ar em % |
 
 Valores aceitos em `tipo`: `PRACA_ARBORIZADA`, `PONTO_HIDRATACAO`, `ABRIGO_CLIMATIZADO` e `UNIDADE_SAUDE`.
 
 ## Endpoints
 
-| Método | Rota | O que faz |
-|---|---|---|
-| GET | `/` | mostra que a API está no ar |
-| GET | `/pontos` | lista os pontos (aceita `?cidade=`) |
-| GET | `/pontos/{id}` | busca um ponto |
-| POST | `/pontos` | cria um ponto |
-| PUT | `/pontos/{id}` | atualiza um ponto |
-| DELETE | `/pontos/{id}` | exclui um ponto |
-| GET | `/registros` | lista os registros (aceita `?pontoId=`) |
-| GET | `/registros/{id}` | busca um registro |
-| POST | `/registros` | cria um registro |
-| PUT | `/registros/{id}` | atualiza um registro |
-| DELETE | `/registros/{id}` | exclui um registro |
+| Método | Rota | O que faz | Resposta |
+|---|---|---|---|
+| GET | `/` | Mostra que a API está no ar | 200 |
+| GET | `/pontos` | Lista os pontos (aceita `?cidade=`) | 200 |
+| GET | `/pontos/{id}` | Busca um ponto | 200 / 404 |
+| POST | `/pontos` | Cadastra um ponto | 201 + `Location` |
+| PUT | `/pontos/{id}` | Atualiza um ponto | 200 / 404 |
+| DELETE | `/pontos/{id}` | Exclui um ponto | 204 / 404 / 422 |
+| GET | `/registros` | Lista os registros (aceita `?pontoId=`) | 200 |
+| GET | `/registros/{id}` | Busca um registro | 200 / 404 |
+| POST | `/registros` | Registra temperatura e umidade | 201 + `Location` |
+| PUT | `/registros/{id}` | Atualiza um registro | 200 / 404 |
+| DELETE | `/registros/{id}` | Exclui um registro | 204 / 404 |
 
-O arquivo `requests.http` tem um exemplo de cada chamada.
+O arquivo `requests.http` tem um exemplo de cada chamada (use a extensão REST Client do VS Code).
+
+### Exemplos de corpo (JSON)
+
+Cadastrar um ponto de refúgio (`POST /pontos`):
+
+```json
+{
+  "nome": "Praça da Sé - Ponto de Hidratação",
+  "endereco": "Praça da Sé, s/n",
+  "cidade": "São Paulo",
+  "tipo": "PONTO_HIDRATACAO"
+}
+```
+
+Registrar temperatura (`POST /registros`):
+
+```json
+{
+  "pontoId": 2,
+  "dataRegistro": "2026-11-01",
+  "temperaturaC": 38.5,
+  "umidadePct": 32
+}
+```
+
+Resposta do registro (201 Created), já com o nome do ponto e o nível de risco:
+
+```json
+{
+  "id": 2,
+  "pontoId": 2,
+  "pontoNome": "Praça da Sé - Hidratação e Sombra",
+  "dataRegistro": "2026-11-01",
+  "temperaturaC": 38.50,
+  "umidadePct": 32.00,
+  "nivelRisco": "ALTO"
+}
+```
 
 ## Regras de negócio
 
@@ -58,19 +149,44 @@ O arquivo `requests.http` tem um exemplo de cada chamada.
 - A data do registro não pode ser no futuro.
 - A temperatura tem que ficar entre -10 e 60 °C e a umidade entre 0 e 100%.
 - Um ponto que já tem registros não pode ser excluído.
-- O nível de risco depende só da temperatura: abaixo de 30 °C é BAIXO, de 30 a 34,99 é MODERADO, de 35 a 39,99 é ALTO e de 40 em diante é EXTREMO.
+- O nível de risco depende só da temperatura:
 
-## Erros
-
-| Quando | Código |
+| Temperatura | Nível de risco |
 |---|---|
-| Id não existe | 404 |
-| Dados inválidos ou JSON mal formado | 400 |
-| Regra de negócio violada | 422 |
-| Conflito no banco (registro em uso) | 409 |
-| Erro inesperado | 500 |
+| Abaixo de 30 °C | BAIXO |
+| De 30 °C a 34,99 °C | MODERADO |
+| De 35 °C a 39,99 °C | ALTO |
+| 40 °C ou mais | EXTREMO |
 
-Todos os erros voltam no mesmo formato: `timestamp`, `status`, `erro`, `mensagem`, `caminho` e `detalhes`.
+## Tratamento de erros
+
+A classe `GlobalExceptionHandler` (`@RestControllerAdvice`) centraliza o tratamento de erros.
+
+| Situação | Exceção tratada | HTTP |
+|---|---|---|
+| Recurso não encontrado | `RecursoNaoEncontradoException` | 404 |
+| Dados inválidos ou JSON malformado | `MethodArgumentNotValidException`, `HttpMessageNotReadableException` | 400 |
+| Parâmetro com tipo inválido | `MethodArgumentTypeMismatchException` | 400 |
+| Regra de negócio violada | `RegraNegocioException` | 422 |
+| Violação de integridade no banco | `DataIntegrityViolationException` | 409 |
+| Erro inesperado | `Exception` | 500 |
+
+Todos os erros voltam no mesmo formato JSON: `timestamp`, `status`, `erro`, `mensagem`, `caminho` e `detalhes`. Exemplo de um `POST /pontos` sem os campos obrigatórios (400):
+
+```json
+{
+  "timestamp": "2026-11-18T16:46:16.763191991",
+  "status": 400,
+  "erro": "Bad Request",
+  "mensagem": "Dados da requisição inválidos",
+  "caminho": "/pontos",
+  "detalhes": [
+    "endereco: O endereço é obrigatório",
+    "tipo: O tipo é obrigatório (PRACA_ARBORIZADA, PONTO_HIDRATACAO, ABRIGO_CLIMATIZADO ou UNIDADE_SAUDE)",
+    "nome: O nome é obrigatório"
+  ]
+}
+```
 
 ## Como rodar
 
@@ -94,4 +210,15 @@ No Linux ou macOS use `export` no lugar de `set` e `./mvnw` no lugar de `mvnw.cm
 
 ## Deploy
 
-O deploy está no Render, usando o `Dockerfile` do projeto. No Render, crie um Web Service com runtime Docker e cadastre `DB_URL`, `DB_USER` e `DB_PASSWORD` nas variáveis de ambiente. Como o plano gratuito hiberna, a primeira requisição depois de um tempo parado pode demorar cerca de um minuto.
+A API está publicada no Render em **https://sombracerta-api.onrender.com**, como Web Service, usando o `Dockerfile` do projeto.
+
+- Runtime: Docker · Instância: Free · Branch: `main`
+- O build é feito em dois estágios: o primeiro compila o projeto com Maven e gera o `.jar`; o segundo cria uma imagem leve, só com o Java, para executar a API.
+- As credenciais do Oracle (`DB_URL`, `DB_USER`, `DB_PASSWORD`) ficam em variáveis de ambiente do Render. Nenhuma senha está no código.
+- Como o plano gratuito hiberna por inatividade, a primeira requisição depois de um tempo parado pode demorar cerca de um minuto.
+
+Para publicar o seu próprio: crie um Web Service com runtime Docker apontando para o repositório e cadastre as três variáveis de ambiente.
+
+## Testes em produção
+
+Os testes foram feitos na URL pública do Render, com a extensão REST Client do VS Code. Foram validados: `GET /` (API online), CRUD completo de `/pontos` e `/registros`, filtro `?pontoId=`, cálculo automático do nível de risco  e as respostas de erro 400 e 404 no formato padronizado.
