@@ -1,0 +1,76 @@
+### Troque pela URL do Render depois do deploy
+@base = http://localhost:8080
+
+### Status da API
+GET {{base}}/
+
+### Criar ponto de refúgio
+POST {{base}}/pontos
+Content-Type: application/json
+
+{
+  "nome": "Praça da Sé - Ponto de Hidratação",
+  "endereco": "Praça da Sé, s/n",
+  "cidade": "São Paulo",
+  "tipo": "PONTO_HIDRATACAO"
+}
+
+### Listar pontos (filtro opcional por cidade)
+GET {{base}}/pontos
+GET {{base}}/pontos?cidade=São Paulo
+
+### Buscar ponto por id
+GET {{base}}/pontos/1
+
+### Atualizar ponto
+PUT {{base}}/pontos/1
+Content-Type: application/json
+
+{
+  "nome": "Praça da Sé - Hidratação e Sombra",
+  "endereco": "Praça da Sé, s/n",
+  "cidade": "São Paulo",
+  "tipo": "PONTO_HIDRATACAO",
+  "ativo": true
+}
+
+### Registrar temperatura
+POST {{base}}/registros
+Content-Type: application/json
+
+{
+  "pontoId": 1,
+  "dataRegistro": "2026-11-01",
+  "temperaturaC": 38.50,
+  "umidadePct": 32.00
+}
+
+### Listar registros (filtro opcional por ponto)
+GET {{base}}/registros
+GET {{base}}/registros?pontoId=1
+
+### Atualizar registro
+PUT {{base}}/registros/1
+Content-Type: application/json
+
+{
+  "pontoId": 1,
+  "dataRegistro": "2026-11-01",
+  "temperaturaC": 41.00,
+  "umidadePct": 28.00
+}
+
+### Excluir registro
+DELETE {{base}}/registros/1
+
+### Excluir ponto (só funciona se não tiver registros)
+DELETE {{base}}/pontos/1
+
+### Teste de validação (deve retornar 400 com detalhes)
+POST {{base}}/pontos
+Content-Type: application/json
+
+{
+  "nome": "",
+  "cidade": "São Paulo"
+}
