@@ -103,45 +103,6 @@ Valores aceitos em `tipo`: `PRACA_ARBORIZADA`, `PONTO_HIDRATACAO`, `ABRIGO_CLIMA
 | PUT | `/registros/{id}` | Atualiza um registro | 200 / 404 |
 | DELETE | `/registros/{id}` | Exclui um registro | 204 / 404 |
 
-O arquivo `requests.http` tem um exemplo de cada chamada (use a extensão REST Client do VS Code).
-
-### Exemplos de corpo (JSON)
-
-Cadastrar um ponto de refúgio (`POST /pontos`):
-
-```json
-{
-  "nome": "Praça da Sé - Ponto de Hidratação",
-  "endereco": "Praça da Sé, s/n",
-  "cidade": "São Paulo",
-  "tipo": "PONTO_HIDRATACAO"
-}
-```
-
-Registrar temperatura (`POST /registros`):
-
-```json
-{
-  "pontoId": 2,
-  "dataRegistro": "2026-11-01",
-  "temperaturaC": 38.5,
-  "umidadePct": 32
-}
-```
-
-Resposta do registro (201 Created), já com o nome do ponto e o nível de risco:
-
-```json
-{
-  "id": 2,
-  "pontoId": 2,
-  "pontoNome": "Praça da Sé - Hidratação e Sombra",
-  "dataRegistro": "2026-11-01",
-  "temperaturaC": 38.50,
-  "umidadePct": 32.00,
-  "nivelRisco": "ALTO"
-}
-```
 
 ## Regras de negócio
 
@@ -188,13 +149,12 @@ Todos os erros voltam no mesmo formato JSON: `timestamp`, `status`, `erro`, `men
 }
 ```
 
-## Como rodar
+##  rodar
 
-A senha do banco não fica no código. Antes de rodar, defina estas variáveis de ambiente:
 
-- `DB_URL`, por exemplo `jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL`
-- `DB_USER` (seu RM)
-- `DB_PASSWORD`
+- `DB_URL`, `jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL`
+- `DB_USER` ( RM)
+- `DB_PASSWORD` (sua senha no oracle)
 
 No Windows (cmd), dentro da pasta do projeto:
 
@@ -214,10 +174,9 @@ A API está publicada no Render em **https://sombracerta-api.onrender.com**, com
 
 - Runtime: Docker · Instância: Free · Branch: `main`
 - O build é feito em dois estágios: o primeiro compila o projeto com Maven e gera o `.jar`; o segundo cria uma imagem leve, só com o Java, para executar a API.
-- As credenciais do Oracle (`DB_URL`, `DB_USER`, `DB_PASSWORD`) ficam em variáveis de ambiente do Render. Nenhuma senha está no código.
+- As credenciais do Oracle (`DB_URL`, `DB_USER`, `DB_PASSWORD`) ficam em variáveis de ambiente do Render. 
 - Como o plano gratuito hiberna por inatividade, a primeira requisição depois de um tempo parado pode demorar cerca de um minuto.
 
-Para publicar o seu próprio: crie um Web Service com runtime Docker apontando para o repositório e cadastre as três variáveis de ambiente.
 
 ## Testes em produção
 
